@@ -23,9 +23,9 @@ class PrintMyActorRefActor(context: ActorContext[String]) extends AbstractBehavi
 }
 
 object Main {
-  def apply(): Behavior[String] =
+  def apply(): Behavior[String] = {
     Behaviors.setup(context => new Main(context))
-
+  }
 }
 
 class Main(context: ActorContext[String]) extends AbstractBehavior[String](context) {
@@ -36,10 +36,16 @@ class Main(context: ActorContext[String]) extends AbstractBehavior[String](conte
         println(s"First: $firstRef")
         firstRef ! "printit"
         this
+      case "hoge" =>
+        val hogeRef = context.spawn(PrintMyActorRefActor(), "hogehoge-actor")
+        hogeRef ! "printit"
+        this
     }
 }
 
 object ActorHierarchyExperiments extends App {
-  val testSystem = ActorSystem(Main(), "testSystem")
+  val testSystem = ActorSystem(Main(), "hogehogeSystem")
+
   testSystem ! "start"
+  testSystem ! "hoge"
 }
