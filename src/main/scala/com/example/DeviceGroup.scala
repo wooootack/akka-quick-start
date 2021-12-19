@@ -3,6 +3,8 @@ package com.example
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, LoggerOps}
 
+import scala.concurrent.duration.DurationInt
+
 object DeviceGroup {
   def apply(groupId: String): Behavior[Command] =
     Behaviors.setup(context => new DeviceGroup(context, groupId))
@@ -14,7 +16,7 @@ object DeviceGroup {
 
 class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String) extends AbstractBehavior[DeviceGroup.Command](context) {
   import DeviceGroup._
-  import DeviceManager.{ DeviceRegistered, ReplyDeviceList, RequestDeviceList, RequestTrackDevice }
+  import DeviceManager.{ DeviceRegistered, ReplyDeviceList, RequestAllTemperatures, RequestDeviceList, RequestTrackDevice }
 
   private var deviceIdToActor = Map.empty[String, ActorRef[Device.Command]]
 
@@ -50,6 +52,16 @@ class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String) e
         context.log.info("Device actor for {} has been terminated", deviceId)
         deviceIdToActor -= deviceId
         this
+
+      case RequestAllTemperatures(requestId, gId, replyTo) =>
+        if (gId == groupId) {
+          context.spawnAnonymous(
+            DeviceGroupQuery(deviceIdToActor, requestId, requester = replyTo, timeout = 3.seconds)
+          )
+          this
+        } else {
+          Behaviors.unhandled
+        }
     }
 
   override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
